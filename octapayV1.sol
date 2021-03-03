@@ -1,12 +1,33 @@
 
 pragma solidity ^0.5.0;
 
+
+library SafeMath {
+    function add(uint a, uint b) public pure returns (uint c) {
+        c = a + b;
+        require(c >= a);
+    }
+    function sub(uint a, uint b) public pure returns (uint c) {
+        require(b <= a);
+        c = a - b;
+    }
+    function mul(uint a, uint b) public pure returns (uint c) {
+        c = a * b;
+        require(a == 0 || c / a == b);
+    }
+    function div(uint a, uint b) public pure returns (uint c) {
+        require(b > 0);
+        c = a / b;
+    }
+}
+
+
+
+
 contract OCTAPAY {
     
-    // safe maths
-    // events s
-    
-
+    using SafeMath for uint;
+     
     string  public name = "OCTAPAY";
     string  public symbol = "OCTA";
     uint256 public initialSupply = 0;
@@ -16,7 +37,7 @@ contract OCTAPAY {
     address public owner ;
     
     
-    address public  payzusAdminAddress = 0x3793f758a36c04B51a520a59520e4d845f94F9F2 ;
+    address public  payzusAdminAddress = 0x7cC26960D2A47c659A8DBeCEb0937148b0026fD6 ;
     address public  mintOctpayLockingAddr ;   // This address should be set time to time by Payzus Admin  everytime new Staking Pool Contract is deployed
      
     bool public tokenBurningStart = false ;
@@ -25,7 +46,7 @@ contract OCTAPAY {
 
 
     
-    // Octapay Token Burning Related Parameter,once it reaches its mazimum Supply
+    // Octapay Token Burning Related Parameter,once it reaches its mazimum/total Supply
       
     
     uint  public tokenBurningInOneSlot = 25 ;
@@ -110,13 +131,14 @@ contract OCTAPAY {
     function mintOctapay (uint _mintBatchAmount) external returns (uint) {
         
         
-   require(msg.sender == mintOctpayLockingAddr , 'Only the staking pool contract address set by Payzus Admin is allowed to call this mint octapay function' );
+     require(msg.sender == mintOctpayLockingAddr , 'Only the staking pool contract address set by Payzus Admin is allowed to call this mint octapay function' );
        
        
        
         require((currentSupply < totalSupply) && (maximumSupplyReached == false) , "Octapay reached its Maximum Supply");
         
-        currentSupply = initialSupply + _mintBatchAmount + currentSupply;
+        //currentSupply = initialSupply + _mintBatchAmount + currentSupply;
+         currentSupply = (initialSupply).add(_mintBatchAmount).add(currentSupply);
 
          
          balanceOf[mintOctpayLockingAddr] = _mintBatchAmount ;    // this should turn to zero once current it distribute all its token
@@ -141,25 +163,6 @@ contract OCTAPAY {
     }
     
     
-
-
-    
-    // function setOctapayContractOctapayReserveBalance(uint _amount) external  view returns(uint) {
-        
-        //   require(msg.sender == mintOctpayLockingAddr , 'Only the staking pool contract address set by Payzus Admin is allowed to call this function' );
-        
-        //     return balanceOf[mintOctpayLockingAddr] = balanceOf[mintOctpayLockingAddr] - (_amount*1000000000000000000) ;
-        
-        // return  _amount ;
-        
-    // }
-    
-    
-    
-    
-    
-    
-    
     
      ////////////////////////////////////////////////////////////////////////////////////////OCTAPAY BURN FUNCTION///////////////////////////////////////////////////////////////////////////////////////////
     
@@ -180,15 +183,17 @@ contract OCTAPAY {
                 
                   if(octapayContractReserveTokenBalance > 0) {
                 
-                octapayReserveBalFirstBurningSlot =   (octapayContractReserveTokenBalance*tokenBurningInOneSlot)/tokenBurningInOneSlotAccuracyRatio ;
+                // octapayReserveBalFirstBurningSlot =   (octapayContractReserveTokenBalance*tokenBurningInOneSlot)/tokenBurningInOneSlotAccuracyRatio ;
+                // octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                // totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                 
-                octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
                 
-                
-                totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
-                
-                tokenBurningCounter = tokenBurningCounter+ 1;
-                firstSlotTokenBurningTime = now ;
+                 octapayReserveBalFirstBurningSlot =   (octapayContractReserveTokenBalance.mul(tokenBurningInOneSlot)).div(tokenBurningInOneSlotAccuracyRatio) ;
+                 octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance.sub(octapayReserveBalFirstBurningSlot) ;
+                 totalSupply = totalSupply.sub(octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
+            
+                 tokenBurningCounter = tokenBurningCounter+ 1;
+                 firstSlotTokenBurningTime = now ;
                 
                   }
    
@@ -202,25 +207,21 @@ contract OCTAPAY {
       
           function burnOctapayForSecondSlot () public onlyPayzusAdmin returns(uint)   {
                 
-               
-         
       
                 require((now > firstSlotTokenBurningTime + 2 minutes) &&(tokenBurningCounter == 2 ) && (tokenBurningCounter <= totalTokenBurninglot) &&  (maximumSupplyReached = true) ,'All four slots of token birning acheived' );
                 
                 if(octapayContractReserveTokenBalance > 0) {
                     
-                octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                // octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                // totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                 
-                totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
+                octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance.sub(octapayReserveBalFirstBurningSlot) ;
+                totalSupply = totalSupply.sub(octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                  
                  
                 tokenBurningCounter = tokenBurningCounter+ 1;
                  secondSlotTokenBurningTime = now ;
                 }
-                
-           
-                
-                
                 
       }
       
@@ -239,13 +240,15 @@ contract OCTAPAY {
                 
                 if(octapayContractReserveTokenBalance > 0) {
                     
-                 octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                //  octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                //  totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
+                
+                  octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance.sub(octapayReserveBalFirstBurningSlot) ;
+                  totalSupply = totalSupply.sub(octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                  
-                  totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                   
-                  
-                tokenBurningCounter = tokenBurningCounter+ 1;
-                thirdSlotTokenBurningTime = now ;
+                  tokenBurningCounter = tokenBurningCounter+ 1;
+                  thirdSlotTokenBurningTime = now ;
                 }
                 
               
@@ -268,12 +271,13 @@ contract OCTAPAY {
                 
                 if(octapayContractReserveTokenBalance > 0) {
                     
-                   octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
-                   
-                totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
+                //   octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance - octapayReserveBalFirstBurningSlot ;
+                //   totalSupply = totalSupply - (octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
+                
+                  octapayContractReserveTokenBalance  =  octapayContractReserveTokenBalance.sub(octapayReserveBalFirstBurningSlot) ;
+                  totalSupply = totalSupply.sub(octapayReserveBalFirstBurningSlot *1000000000000000000) ; 
                     
-                    
-                tokenBurningCounter = tokenBurningCounter+ 1;
+                  tokenBurningCounter = tokenBurningCounter+ 1;
               
                 }
                 
@@ -318,3 +322,10 @@ contract OCTAPAY {
         return true;
     }
 }
+
+
+
+
+
+
+
